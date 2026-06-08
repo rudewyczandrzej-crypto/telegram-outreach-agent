@@ -702,78 +702,90 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Або просто надішли URL з нотаткою."
     )
 
-
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
 
     if not query:
         return
 
-    if await deny_if_not_allowed(update):
-        return
-
-    await query.answer()
-
-    data = query.data
-
     try:
-        parts = data.split(":")
-        action = parts[0]
-        prospect_id = int(parts[1])
-    except Exception:
-        await query.edit_message_text("Не зрозумів кнопку.")
-        return
+        await query.answer()
 
-    fake_update = update
-    fake_update.effective_message = query.message
+        telegram_chat_id = query.message.chat_id
 
-    if action == "view":
-        chat_id = query.message.chat_id
-        prospect = get_prospect(prospect_id, chat_id)
-        if not prospect:
-            await query.edit_message_text("Prospect не знайдено.")
+        if not is_allowed_chat(telegram_chat_id):
+            await query.edit_message_text("Доступ закритий 🔒")
             return
 
-        pages = list_prospect_pages(prospect_id)
-        messages = list_generated_messages(prospect_id)
+        data = query.data
 
-        await query.edit_message_text(
-            format_prospect_detail(prospect, pages, messages),
-            reply_markup=build_prospect_keyboard(prospect_id),
-            disable_web_page_preview=True,
-        )
-        return
-
-    if action == "research":
-        await do_research(update, prospect_id)
-        return
-
-    if action == "email":
-        await do_generate_email(update, prospect_id, "first_email")
-        return
-
-    if action == "followup":
-        await do_generate_email(update, prospect_id, "followup")
-        return
-
-    if action == "status":
-        if len(parts) < 3:
-            await query.edit_message_text("Не передано статус.")
+        try:
+            parts = data.split(":")
+            action = parts[0]
+            prospect_id = int(parts[1])
+        except Exception:
+            await query.edit_message_text("Не зрозумів кнопку.")
             return
 
-        status = parts[2]
-        chat_id = query.message.chat_id
-        updated = update_status(prospect_id, chat_id, status)
+        if action == "view":
+            prospect = get_prospect(prospect_id, telegram_chat_id)
 
-        if updated:
-            await query.edit_message_text(
-                f"Статус prospect {prospect_id} змінено на {status} ✅",
+            if not prospect:
+                await query.edit_message_text("Prospect не знайдено.")
+                return
+
+            pages = list_prospect_pages(prospect_id)
+            messages = list_generated_messages(prospect_id)
+
+            await query.message.reply_text(
+                format_prospect_detail(prospect, pages, messages),
                 reply_markup=build_prospect_keyboard(prospect_id),
+                disable_web_page_preview=True,
             )
-        else:
-            await query.edit_message_text("Prospect не знайдено.")
+            return
 
-        return
+        if action == "research":
+            await do_research(update, prospect_id)
+            return
+
+        if action == "email":
+            await do_generate_email(update, prospect_id, "first_email")
+            return
+
+        if action == "followup":
+            await do_generate_email(update, prospect_id, "followup")
+            return
+
+        if action == "status":
+            if len(parts) < 3:
+                await query.edit_message_text("Не передано статус.")
+                return
+
+            status = parts[2]
+            updated = update_status(prospect_id, telegram_chat_id, status)
+
+            if updated:
+                await query.message.reply_text(
+                    f"Статус prospect {prospect_id} змінено на {status} ✅",
+                    reply_markup=build_prospect_keyboard(prospect_id),
+                )
+            else:
+                await query.message.reply_text("Prospect не знайдено.")
+
+            return
+
+        await query.message.reply_text("Невідома дія з кнопки.")
+
+    except Exception as error:
+        logging.exception("Error while handling button")
+
+        try:
+            await query.message.reply_text(
+                "Сталася помилка при обробці кнопки 😕\n\n"
+                f"Технічна помилка:\n{type(error).__name__}: {error}"
+            )
+        except Exception:
+            pass
 
 
 def main():
