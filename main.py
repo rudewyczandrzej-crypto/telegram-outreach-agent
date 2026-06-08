@@ -709,7 +709,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        await query.answer("Кнопку отримав ✅")
+        await query.answer()
 
         telegram_chat_id = query.message.chat_id
         data = query.data
@@ -746,23 +746,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         if action == "research":
-            await query.message.reply_text(
-                f"🔍 Кнопку Research отримав. Починаю дослідження prospect #{prospect_id}..."
-            )
             await do_research(update, prospect_id)
             return
 
         if action == "email":
-            await query.message.reply_text(
-                f"✉️ Кнопку Email отримав. Генерую email для prospect #{prospect_id}..."
-            )
             await do_generate_email(update, prospect_id, "first_email")
             return
 
         if action == "followup":
-            await query.message.reply_text(
-                f"🔁 Кнопку Follow-up отримав. Генерую follow-up для prospect #{prospect_id}..."
-            )
             await do_generate_email(update, prospect_id, "followup")
             return
 
