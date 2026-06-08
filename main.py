@@ -709,29 +709,30 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        await query.answer()
+        await query.answer("Кнопку отримав ✅")
 
         telegram_chat_id = query.message.chat_id
+        data = query.data
+
+        logging.info(f"Button clicked: chat_id={telegram_chat_id}, data={data}")
 
         if not is_allowed_chat(telegram_chat_id):
-            await query.edit_message_text("Доступ закритий 🔒")
+            await query.message.reply_text("Доступ закритий 🔒")
             return
-
-        data = query.data
 
         try:
             parts = data.split(":")
             action = parts[0]
             prospect_id = int(parts[1])
         except Exception:
-            await query.edit_message_text("Не зрозумів кнопку.")
+            await query.message.reply_text(f"Не зрозумів кнопку: {data}")
             return
 
         if action == "view":
             prospect = get_prospect(prospect_id, telegram_chat_id)
 
             if not prospect:
-                await query.edit_message_text("Prospect не знайдено.")
+                await query.message.reply_text("Prospect не знайдено.")
                 return
 
             pages = list_prospect_pages(prospect_id)
@@ -745,20 +746,29 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         if action == "research":
+            await query.message.reply_text(
+                f"🔍 Кнопку Research отримав. Починаю дослідження prospect #{prospect_id}..."
+            )
             await do_research(update, prospect_id)
             return
 
         if action == "email":
+            await query.message.reply_text(
+                f"✉️ Кнопку Email отримав. Генерую email для prospect #{prospect_id}..."
+            )
             await do_generate_email(update, prospect_id, "first_email")
             return
 
         if action == "followup":
+            await query.message.reply_text(
+                f"🔁 Кнопку Follow-up отримав. Генерую follow-up для prospect #{prospect_id}..."
+            )
             await do_generate_email(update, prospect_id, "followup")
             return
 
         if action == "status":
             if len(parts) < 3:
-                await query.edit_message_text("Не передано статус.")
+                await query.message.reply_text("Не передано статус.")
                 return
 
             status = parts[2]
@@ -774,7 +784,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
-        await query.message.reply_text("Невідома дія з кнопки.")
+        await query.message.reply_text(f"Невідома дія з кнопки: {action}")
 
     except Exception as error:
         logging.exception("Error while handling button")
