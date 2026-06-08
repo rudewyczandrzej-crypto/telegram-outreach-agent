@@ -1,1 +1,7 @@
-requirements.txt
+python-telegram-bot[job-queue]==22.7
+python-dotenv==1.0.1
+groq
+psycopg[binary]
+requests
+beautifulsoup4
+tldextract
